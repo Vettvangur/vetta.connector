@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width">
+<title>Vetta custom login example</title>
+<main><h1>Sign in</h1><p>This form belongs to the client website.</p>
+<form id="login"><label>Method <select id="method"><option value="2">Auðkenni app</option><option value="0">Phone SIM</option></select></label>
+<label>Phone number or kennitala <input id="identifier" required autocomplete="off"></label>
+<button id="start">Sign in</button></form><button id="cancel" disabled>Cancel</button>
+<p id="challenge" aria-live="polite"></p><p id="status" role="status"></p></main>
+<script type="module">
+import {VettaLogin} from '/auth/vetta/client.js';
+const login = new VettaLogin();
+const start = document.querySelector('#start'), cancel = document.querySelector('#cancel');
+const status = document.querySelector('#status'), challenge = document.querySelector('#challenge');
+document.querySelector('#login').addEventListener('submit', async event => {
+    event.preventDefault(); start.disabled = true;
+    try {
+        const result = await login.start({method: Number(document.querySelector('#method').value), phoneNumberOrSsn: document.querySelector('#identifier').value});
+        document.querySelector('#identifier').value = '';
+        status.textContent = result.state;
+        if (result.state !== 'Started') return;
+        challenge.textContent = `Confirm code: ${result.challenge}`; cancel.disabled = false;
+        const completed = await login.wait(result => { status.textContent = result.state; });
+        if (completed.state === 'Completed') location.assign(completed.redirect);
+    } catch (error) { status.textContent = error.name === 'AbortError' ? 'Cancelled' : 'Request interrupted. Cancel this attempt before starting again.'; }
+    finally { start.disabled = !!login.handle; cancel.disabled = !login.handle; }
+});
+cancel.addEventListener('click', async () => {
+    try { status.textContent = (await login.cancel()).state; }
+    catch { status.textContent = 'Cancellation could not be confirmed.'; }
+    start.disabled = !!login.handle; cancel.disabled = !login.handle;
+});
+</script></html>

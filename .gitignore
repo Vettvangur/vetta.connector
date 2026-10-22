@@ -1,0 +1,16 @@
+**/bin/
+**/obj/
+.idea/
+.vs/
+.DS_Store
+artifacts/
+TestResults/
+**/appsettings.Local.json
+**/appsettings.*.local.json
+.env
+.env.*
+*.pfx
+*.p12
+*.key
+*.snupkg
+*.nupkg
