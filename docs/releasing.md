@@ -17,13 +17,16 @@ on NuGet.org with these values:
 | GitHub repository | `vetta.connector` |
 | Workflow file | `publish.yml` |
 | GitHub environment | `nuget` |
-| Package scope | `Vetta.Connector*` |
+| Package scopes (one per line) | `Vetta.Connector`, `Vetta.Connector.AspNetCore` |
 
 Allow publishing new packages and new versions. Set the GitHub repository variable
 `NUGET_USER` to the **personal NuGet username that creates the policy** (not an
 email address or an organization name, unless that name is a personal account).
 The organization owns the packages; the member's account performs the token exchange.
 Verify that new packages are owned by Vettvangur after the first release.
+
+The configured publishing account is `Vettvangur`; the repository variable
+`NUGET_USER` matches this NuGet account. The policy is named **Vetta Connector**.
 
 No permanent NuGet API key is stored in GitHub. Only the publish job can obtain a
 short-lived credential. Pull requests and ordinary branch pushes only build/test.
