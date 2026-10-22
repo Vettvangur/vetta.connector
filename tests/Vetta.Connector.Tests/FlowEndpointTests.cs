@@ -19,6 +19,8 @@ public sealed class FlowEndpointTests
         builder.WebHost.UseTestServer();
         var client = new FakeClient();
         builder.Services.AddSingleton<IVettaClient>(client);
+        builder.Services.AddSingleton<IVettaPasskeyClient>(new PasskeyFlowTests.Client());
+        builder.Services.AddVettaCustomerPasskeys();
         builder.Services.AddDataProtection().UseEphemeralDataProtectionProvider();
         builder.Services.AddVettaAuthenticationFlow<Completion>();
         await using var app = builder.Build();
@@ -28,6 +30,7 @@ public sealed class FlowEndpointTests
         http.BaseAddress = new("https://localhost");
         Assert.Equal(HttpStatusCode.BadRequest, (await http.PostAsJsonAsync("/auth/vetta/start", new StartRequest(AuthenticationMethod.App, "1234567890"))).StatusCode);
         Assert.Equal(0, client.Starts);
+        Assert.Equal(HttpStatusCode.BadRequest, (await http.PostAsJsonAsync("/auth/vetta/passkeys/options", new {})).StatusCode);
         var session = await http.GetAsync("/auth/vetta/session");
         Assert.Contains("no-store", session.Headers.CacheControl!.ToString());
         var token = (await session.Content.ReadFromJsonAsync<SessionToken>())!.Token;
@@ -42,6 +45,12 @@ public sealed class FlowEndpointTests
         Assert.Equal("Completed", (await result.Content.ReadFromJsonAsync<LoginReply>())!.State);
         Assert.DoesNotContain("1234567890", await result.Content.ReadAsStringAsync());
         Assert.Equal(1, client.Starts);
+        var passkeyOptions = await http.PostAsJsonAsync("/auth/vetta/passkeys/options", new {});
+        var passkey = (await passkeyOptions.Content.ReadFromJsonAsync<PasskeyLoginReply>())!;
+        Assert.Equal("Options", passkey.State);
+        var passkeyResult = await http.PostAsJsonAsync("/auth/vetta/passkeys/finish", new { handle = passkey.Handle, credentialJson = "{}" });
+        Assert.Equal("Completed", (await passkeyResult.Content.ReadFromJsonAsync<PasskeyLoginReply>())!.State);
+        Assert.DoesNotContain("1234567890", await passkeyResult.Content.ReadAsStringAsync());
         Assert.Contains("export class VettaLogin", await http.GetStringAsync("/auth/vetta/client.js"));
     }
 

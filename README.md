@@ -4,12 +4,14 @@ Add Auðkenni authentication to your website while keeping your own login page,
 accounts, and application sessions. Vetta Connector handles authentication requests
 and returns a verified identity to your backend.
 
-Supports **.NET 10** and two authentication methods:
+Supports **.NET 10** and the following provider authentication methods:
 
 | Method | C# value | User input |
 | --- | --- | --- |
 | Auðkenni app | `AuthenticationMethod.App` | Icelandic kennitala (10 digits) |
 | Electronic ID on a phone SIM | `AuthenticationMethod.Sim` | Icelandic phone number (7 digits) |
+
+Customer-domain passkeys are available from version 0.2.0. See [passkey setup and examples](https://github.com/Vettvangur/vetta.connector/blob/main/docs/passkeys.md). They require a verified domain and explicit enablement; applications default to shared Vetta passkeys.
 
 ## Choose your integration
 
@@ -35,7 +37,7 @@ it in JavaScript, HTML, a mobile bundle, or a public repository.
 
 ## Installation
 
-After the first NuGet release is published, install the ASP.NET Core integration:
+Install the ASP.NET Core integration:
 
 ```sh
 dotnet add package Vetta.Connector.AspNetCore

@@ -2,7 +2,7 @@ import {readFile} from 'node:fs/promises';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 const source = await readFile(new URL('../../src/Vetta.Connector.AspNetCore/vetta-login.js', import.meta.url), 'utf8');
-const {VettaLogin} = await import(`data:text/javascript;base64,${Buffer.from(source).toString('base64')}`);
+const {VettaLogin, VettaPasskeys} = await import(`data:text/javascript;base64,${Buffer.from(source).toString('base64')}`);
 globalThis.location = {origin: 'https://client.example'};
 const response = value => ({ok: true, json: async () => value});
 
@@ -39,4 +39,32 @@ test('concurrent wait is rejected and cancellation ignores late success', async 
     resolveStatus(response({state: 'Completed', redirect: '/account'}));
     assert.equal((await wait).state, 'Cancelled');
     assert.equal(updates, 0);
+});
+
+test('passkeys use native credentials and a same-origin finish without exposing binding', async () => {
+    const handle='A'.repeat(64); const calls=[];
+    globalThis.PublicKeyCredential={parseCreationOptionsFromJSON:x=>x,parseRequestOptionsFromJSON:x=>x};
+    Object.defineProperty(globalThis,'navigator',{configurable:true,value:{credentials:{get:async()=>({toJSON:()=>({id:'credential'})})}}});
+    globalThis.fetch=async (url,options)=>{
+        calls.push({url,options});
+        if(url.endsWith('/session')) return response({token:'csrf'});
+        if(url.endsWith('/options')) return response({state:'Options',handle,optionsJson:'{}'});
+        return response({state:'Completed',redirect:'/account'});
+    };
+    const result=await new VettaPasskeys().authenticate();
+    assert.equal(result.state,'Completed');
+    const finish=JSON.parse(calls.at(-1).options.body);
+    assert.deepEqual(finish,{handle,credentialJson:'{"id":"credential"}'});
+});
+test('native cancellation cancels the bound ceremony without attempting completion', async () => {
+    const calls=[];
+    globalThis.PublicKeyCredential={parseCreationOptionsFromJSON:x=>x,parseRequestOptionsFromJSON:x=>x};
+    Object.defineProperty(globalThis,'navigator',{configurable:true,value:{credentials:{get:async()=>{throw new Error('cancelled');}}}});
+    globalThis.fetch=async url=>{
+        calls.push(url);
+        return response(url.endsWith('/session')?{token:'csrf'}:url.endsWith('/options')?{state:'Options',handle:'A'.repeat(64),optionsJson:'{}'}:{state:'Cancelled'});
+    };
+    await assert.rejects(new VettaPasskeys().authenticate());
+    assert.equal(calls.some(x=>x.endsWith('/finish')),false);
+    assert.equal(calls.at(-1).endsWith('/cancel'),true);
 });

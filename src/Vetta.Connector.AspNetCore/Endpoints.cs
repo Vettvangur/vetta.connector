@@ -29,6 +29,12 @@ public static class Endpoints
         return services;
     }
 
+    public static IServiceCollection AddVettaCustomerPasskeys(this IServiceCollection services)
+    {
+        services.AddScoped<VettaPasskeyFlow>();
+        return services;
+    }
+
     public static RouteGroupBuilder MapVettaAuthentication(this IEndpointRouteBuilder endpoints, string prefix = "/auth/vetta")
     {
         if (endpoints.ServiceProvider.GetRequiredService<IVettaAttemptStore>() is DevelopmentAttemptStore &&
@@ -74,11 +80,44 @@ public static class Endpoints
             if (browser is null || !Valid(request.Handle)) return Results.BadRequest(new { error = "invalid_attempt" });
             return Results.Ok(flow.Cancel(browser, request.Handle));
         });
+        if (endpoints.ServiceProvider.GetRequiredService<IServiceProviderIsService>().IsService(typeof(VettaPasskeyFlow)))
+        {
+        group.MapPost("/passkeys/manage", async (PasskeyManageRequest request, HttpContext http, VettaPasskeyFlow flow) =>
+        {
+            var browser = Browser(http);
+            if (browser is null || !Valid(request.CompletedLoginHandle) || request.CredentialId?.Length > 2048) return Results.BadRequest();
+            var result = await flow.ManageAsync(browser, request.CompletedLoginHandle, request.CredentialId, http.RequestAborted);
+            return Results.Ok(new { result.State, result.Passkeys });
+        });
+        group.MapPost("/passkeys/options", async (PasskeyOptionsRequest request, HttpContext http, VettaPasskeyFlow flow) =>
+        {
+            var browser = Browser(http);
+            if (browser is null || (request.CompletedLoginHandle is not null && !Valid(request.CompletedLoginHandle)))
+                return Results.BadRequest();
+            return Results.Ok(await flow.OptionsAsync(browser, request.CompletedLoginHandle, http.RequestAborted));
+        });
+        group.MapPost("/passkeys/finish", async (PasskeyFinishRequest request, HttpContext http, VettaPasskeyFlow flow) =>
+        {
+            var browser = Browser(http);
+            if (browser is null || !Valid(request.Handle) || request.CredentialJson is not { Length: > 0 and <= 60000 })
+                return Results.BadRequest();
+            return Results.Ok(await flow.FinishAsync(http, browser, request.Handle, request.CredentialJson, http.RequestAborted));
+        }).WithMetadata(new Microsoft.AspNetCore.Mvc.RequestSizeLimitAttribute(65536));
+        group.MapPost("/passkeys/cancel", async (HandleRequest request, HttpContext http, VettaPasskeyFlow flow) =>
+        {
+            var browser = Browser(http);
+            if (browser is null || !Valid(request.Handle)) return Results.BadRequest();
+            return Results.Ok(await flow.CancelAsync(browser, request.Handle, http.RequestAborted));
+        });
+        }
         group.MapGet("/client.js", () => Results.Stream(typeof(Endpoints).Assembly.GetManifestResourceStream(
             "Vetta.Connector.AspNetCore.vetta-login.js")!, "text/javascript"));
         return group;
     }
     private static string? Browser(HttpContext http) => http.Request.Cookies.TryGetValue(BrowserCookie, out var value) && Valid(value) ? value : null;
     private static bool Valid(string? value) => value is { Length: 64 } && value.All(Uri.IsHexDigit);
+    public sealed record PasskeyManageRequest(string CompletedLoginHandle, string? CredentialId = null);
+    public sealed record PasskeyOptionsRequest(string? CompletedLoginHandle = null);
+    public sealed record PasskeyFinishRequest(string Handle, string CredentialJson);
     public sealed record HandleRequest(string Handle);
 }
