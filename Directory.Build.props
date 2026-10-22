@@ -7,6 +7,7 @@
     <PackageProjectUrl>https://github.com/Vettvangur/vetta.connector</PackageProjectUrl>
     <RepositoryUrl>https://github.com/Vettvangur/vetta.connector</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
+    <PackageIcon>icon.png</PackageIcon>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageTags>vetta;audkenni;authentication;aspnetcore</PackageTags>
     <IncludeSymbols>true</IncludeSymbols>
@@ -15,6 +16,7 @@
     <ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true'">true</ContinuousIntegrationBuild>
   </PropertyGroup>
   <ItemGroup>
+    <None Include="$(MSBuildThisFileDirectory)assets/vetta-icon.png" Pack="true" PackagePath="/icon.png" />
     <None Include="$(MSBuildThisFileDirectory)README.md" Pack="true" PackagePath="/" />
     <None Include="$(MSBuildThisFileDirectory)LICENSE" Pack="true" PackagePath="/" />
   </ItemGroup>
