@@ -1,6 +1,6 @@
 namespace Vetta.Connector.AspNetCore;
 
-public sealed record LoginAttempt(string Handle, string Browser, Guid UpstreamId, DateTimeOffset Expires);
+public sealed record LoginAttempt(string Handle, string Browser, Guid UpstreamId, DateTimeOffset Expires, string Kind = "audkenni", string? Origin = null);
 public enum AttemptPhase { Starting, Ready, Polling, Completing, Completed, Cancelled, Failed }
 public sealed record AttemptSnapshot(LoginAttempt Attempt, AttemptPhase Phase, string? Redirect = null);
 

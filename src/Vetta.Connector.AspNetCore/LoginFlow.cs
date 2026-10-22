@@ -39,7 +39,7 @@ public sealed class VettaLoginFlow(IVettaClient client, IVettaAttemptStore store
     public async Task<LoginReply> StatusAsync(HttpContext context, string browser, string handle, CancellationToken ct)
     {
         var entry = store.Read(handle, browser);
-        if (entry is null) return new("Expired");
+        if (entry is null || entry.Attempt.Kind != "audkenni") return new("Expired");
         if (entry.Phase == AttemptPhase.Completed) return new("Completed", Redirect: entry.Redirect);
         if (entry.Phase is AttemptPhase.Cancelled or AttemptPhase.Failed) return new(entry.Phase.ToString());
         if (!store.Transition(handle, browser, AttemptPhase.Ready, AttemptPhase.Polling)) return new("Busy");
@@ -84,7 +84,7 @@ public sealed class VettaLoginFlow(IVettaClient client, IVettaAttemptStore store
     public LoginReply Cancel(string browser, string handle)
     {
         var entry = store.Read(handle, browser);
-        if (entry is null) return new("Expired");
+        if (entry is null || entry.Attempt.Kind != "audkenni") return new("Expired");
         if (entry.Phase == AttemptPhase.Cancelled) return new("Cancelled");
         if (store.Transition(handle, browser, AttemptPhase.Ready, AttemptPhase.Cancelled) ||
             store.Transition(handle, browser, AttemptPhase.Polling, AttemptPhase.Cancelled)) return new("Cancelled");
