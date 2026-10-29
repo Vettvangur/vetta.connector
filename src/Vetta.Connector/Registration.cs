@@ -19,6 +19,9 @@ public static class Registration
         services.AddHttpClient<IVettaPasskeyClient, VettaPasskeyClient>()
             .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false, UseCookies = false })
             .RemoveAllLoggers();
+        services.AddHttpClient<IVettaDeviceLinkClient, VettaDeviceLinkClient>()
+            .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false, UseCookies = false })
+            .RemoveAllLoggers();
         return services;
     }
 }

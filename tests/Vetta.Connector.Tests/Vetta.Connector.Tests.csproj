@@ -7,6 +7,7 @@
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.13" />
     <ProjectReference Include="../../src/Vetta.Connector/Vetta.Connector.csproj" />
     <ProjectReference Include="../../src/Vetta.Connector.AspNetCore/Vetta.Connector.AspNetCore.csproj" />
+    <ProjectReference Include="../../src/Vetta.Connector.SqlServer/Vetta.Connector.SqlServer.csproj" />
     <Using Include="Xunit" />
   </ItemGroup>
 </Project>

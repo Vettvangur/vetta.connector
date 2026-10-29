@@ -11,6 +11,16 @@ jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    services:
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: Y
+          MSSQL_SA_PASSWORD: Vetta_CI_Disposable_Only42!
+        ports:
+          - 1433:1433
+    env:
+      VETTA_TEST_SQLSERVER: "Server=localhost,1433;User ID=sa;Password=Vetta_CI_Disposable_Only42!;Encrypt=True;TrustServerCertificate=True"
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:

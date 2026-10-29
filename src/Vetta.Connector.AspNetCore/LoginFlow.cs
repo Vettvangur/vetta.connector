@@ -8,7 +8,7 @@ public interface IVettaLoginCompletion
     // Use CompletionId for idempotency. Sign-in/account policy belongs to the host.
     Task<string> CompleteAsync(HttpContext context, VerifiedIdentity identity, string completionId, CancellationToken cancellationToken);
 }
-public sealed record LoginReply(string State, string? Handle = null, string? Challenge = null, string? Redirect = null);
+public sealed record LoginReply(string State, string? Handle = null, string? Challenge = null, string? Redirect = null) { public string? ErrorCode { get; init; } }
 
 public sealed class VettaLoginFlow(IVettaClient client, IVettaAttemptStore store, IVettaLoginCompletion completion, TimeProvider time)
 {
@@ -25,7 +25,7 @@ public sealed class VettaLoginFlow(IVettaClient client, IVettaAttemptStore store
                 !store.Bind(handle, browser, result.Identifier.Value))
             {
                 store.Transition(handle, browser, AttemptPhase.Starting, AttemptPhase.Failed);
-                return new("Unavailable");
+                return new("Unavailable") { ErrorCode = result.ErrorCode };
             }
             return new("Started", handle, result.Challenge);
         }
@@ -54,12 +54,12 @@ public sealed class VettaLoginFlow(IVettaClient client, IVettaAttemptStore store
             if (result.State == AuthenticationState.Unavailable)
             {
                 store.Transition(handle, browser, AttemptPhase.Polling, AttemptPhase.Ready);
-                return new("Unavailable");
+                return new("Unavailable") { ErrorCode = result.ErrorCode };
             }
             if (result.State != AuthenticationState.Succeeded || result.Identity is null)
             {
                 store.Transition(handle, browser, AttemptPhase.Polling, AttemptPhase.Failed);
-                return new("Failed");
+                return new("Failed") { ErrorCode = result.ErrorCode };
             }
             if (!store.Transition(handle, browser, AttemptPhase.Polling, AttemptPhase.Completing)) return new("Cancelled");
             // Cancellation cannot revoke completion once claimed. Host side effects must be idempotent.

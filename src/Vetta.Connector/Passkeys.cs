@@ -7,7 +7,7 @@ namespace Vetta.Connector;
 
 /// <summary>Vetta uses a shared passkey; CustomerDomain requires a separately enrolled passkey on the configured origin.</summary>
 public sealed record PasskeyPolicy(string Scope, string? Origin, bool PreferPasskeys);
-public sealed record PasskeyResponse(string State, Guid? CeremonyId = null, string? OptionsJson = null, VerifiedIdentity? Identity = null, PasskeyDetails[]? Passkeys = null);
+public sealed record PasskeyResponse(string State, Guid? CeremonyId = null, string? OptionsJson = null, VerifiedIdentity? Identity = null, PasskeyDetails[]? Passkeys = null) { public string? ErrorCode { get; init; } public int? HttpStatusCode { get; init; } }
 public sealed record PasskeyDetails(string Id, DateTimeOffset CreatedAt);
 public interface IVettaPasskeyClient
 {
@@ -29,7 +29,7 @@ public sealed class VettaPasskeyClient : IVettaPasskeyClient
     private readonly string application, apiKey;
     private readonly TimeSpan timeout;
     private sealed record Wire(string State, Guid? CeremonyId = null, string? OptionsJson = null, VerifiedIdentity? Identity = null,
-        string? Scope = null, string? Origin = null, bool PreferPasskeys = false, PasskeyDetails[]? Passkeys = null);
+        string? Scope = null, string? Origin = null, bool PreferPasskeys = false, PasskeyDetails[]? Passkeys = null) { public string? ErrorCode { get; init; } public int? HttpStatusCode { get; init; } }
     public VettaPasskeyClient(HttpClient http, IOptions<VettaConnectorOptions> options)
     {
         options.Value.Validate();
@@ -76,7 +76,7 @@ public sealed class VettaPasskeyClient : IVettaPasskeyClient
             result.Identity is not { Name.Length: > 0, Ssn.Length: 10 })) return new("Unavailable");
         if (result.State == "PasskeyList" && (operation is not ("list" or "remove") || result.Passkeys is null || result.Passkeys.Length > 10)) return new("Unavailable");
         if (result.State is not ("PasskeyList" or "Options" or "Succeeded" or "Failed" or "Unavailable" or "Cancelled")) return new("Unavailable");
-        return new(result.State, result.CeremonyId, result.OptionsJson, result.State == "Succeeded" ? result.Identity : null, result.Passkeys);
+        return new(result.State, result.CeremonyId, result.OptionsJson, result.State == "Succeeded" ? result.Identity : null, result.Passkeys) { ErrorCode = result.ErrorCode, HttpStatusCode = result.HttpStatusCode };
     }
     private static bool ValidOrigin(string? value) => Uri.TryCreate(value, UriKind.Absolute, out var uri) &&
         uri.Scheme == "https" && uri.Port == 443 && uri.UserInfo.Length == 0 && uri.Query.Length == 0 &&
@@ -94,16 +94,12 @@ public sealed class VettaPasskeyClient : IVettaPasskeyClient
             };
             request.Headers.Authorization = new AuthenticationHeaderValue("apiKey", apiKey);
             using var response = await http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, deadline.Token).ConfigureAwait(false);
-            if (!response.IsSuccessStatusCode || response.Content.Headers.ContentLength > 65536) return new("Unavailable");
-            await using var stream = await response.Content.ReadAsStreamAsync(deadline.Token).ConfigureAwait(false);
-            using var buffer = new MemoryStream();
-            var bytes = new byte[4096]; int count;
-            while ((count = await stream.ReadAsync(bytes, deadline.Token).ConfigureAwait(false)) > 0)
-            {
-                if (buffer.Length + count > 65536) return new("Unavailable");
-                buffer.Write(bytes, 0, count);
-            }
-            return JsonSerializer.Deserialize<Wire>(buffer.ToArray(), new JsonSerializerOptions(JsonSerializerDefaults.Web)) ?? new("Unavailable");
+            JsonElement body = default;
+            try { body = await VettaProtocol.ReadAsync(response.Content, deadline.Token).ConfigureAwait(false); }
+            catch (JsonException) when (!response.IsSuccessStatusCode) { }
+            if (!response.IsSuccessStatusCode) return new("Unavailable") { ErrorCode = VettaProtocol.SafeCode(body), HttpStatusCode = (int)response.StatusCode };
+            var result = body.Deserialize<Wire>(new JsonSerializerOptions(JsonSerializerDefaults.Web)) ?? new("Unavailable");
+            return result with { ErrorCode = VettaProtocol.SafeCode(body) };
         }
         catch (OperationCanceledException) when (!ct.IsCancellationRequested) { return new("Unavailable"); }
         catch (Exception ex) when (ex is HttpRequestException or IOException or JsonException) { return new("Unavailable"); }

@@ -5,7 +5,12 @@ public enum AuthenticationState { Started, Pending, Succeeded, Failed, Unavailab
 public enum AuthenticationError { InvalidResponse, InvalidRequest, Unauthorized, RateLimited, ServerUnavailable, AuthenticationFailed, TransportFailure }
 public sealed record VerifiedIdentity(string Name, string Ssn);
 public sealed record AuthenticationResult(AuthenticationState State, Guid? Identifier = null,
-    string? Challenge = null, VerifiedIdentity? Identity = null, AuthenticationError? Error = null);
+    string? Challenge = null, VerifiedIdentity? Identity = null, AuthenticationError? Error = null)
+{
+    /// <summary>Allowlisted machine-readable code, never the upstream error message.</summary>
+    public string? ErrorCode { get; init; }
+    public int? HttpStatusCode { get; init; }
+}
 public sealed record StartRequest(AuthenticationMethod Method, string PhoneNumberOrSsn,
     string? Challenge = null, bool UseEmojiChallenge = false, string? SimChallengePrefix = null,
     string? AppAdditionalMessage = null, string? Language = null);

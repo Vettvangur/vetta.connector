@@ -1,4 +1,4 @@
 <Project Sdk="Microsoft.NET.Sdk">
 <PropertyGroup><TargetFramework>net10.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable><PackageId>Vetta.Connector.AspNetCore</PackageId><Description>ASP.NET Core endpoints and a browser helper for Vetta authentication.</Description></PropertyGroup>
-<ItemGroup><FrameworkReference Include="Microsoft.AspNetCore.App" /><ProjectReference Include="../Vetta.Connector/Vetta.Connector.csproj" /><EmbeddedResource Include="vetta-login.js" /></ItemGroup>
+<ItemGroup><PackageReference Include="QRCoder" Version="1.6.0" /><FrameworkReference Include="Microsoft.AspNetCore.App" /><ProjectReference Include="../Vetta.Connector/Vetta.Connector.csproj" /><EmbeddedResource Include="vetta-login.js" /></ItemGroup>
 </Project>

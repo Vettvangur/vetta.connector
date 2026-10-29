@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Vetta.Connector;
 using Vetta.Connector.AspNetCore;
+using Vetta.Connector.SqlServer;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddVettaConnector(options =>
@@ -19,6 +20,10 @@ builder.Services.AddAuthentication("Demo").AddCookie("Demo", options =>
 });
 builder.Services.AddAuthorization();
 builder.Services.AddVettaAuthenticationFlow<DemoCompletion>();
+if (builder.Configuration["Vetta:DeviceLinkCallbackUrl"] is { Length: > 0 } callback)
+    builder.Services.AddVettaDeviceLinks(new() { CallbackUrl = new Uri(callback), ReturnPath = "/device-link.html" });
+if (builder.Configuration.GetConnectionString("VettaAttempts") is { Length: > 0 } database)
+    builder.Services.AddVettaSqlServerAttemptStore(database);
 var app = builder.Build();
 app.UseHttpsRedirection();
 app.UseDefaultFiles();

@@ -68,3 +68,55 @@ test('native cancellation cancels the bound ceremony without attempting completi
     assert.equal(calls.some(x=>x.endsWith('/finish')),false);
     assert.equal(calls.at(-1).endsWith('/cancel'),true);
 });
+
+const {VettaDeviceLinks} = await import(`data:text/javascript;base64,${Buffer.from(source).toString('base64')}`);
+test('device links start only on request and preserve safe errors', async () => {
+    const calls = [];
+    globalThis.fetch = async (url, options) => {
+        calls.push({url, options});
+        return response(url.endsWith('/session') ? {token: 'csrf'} : {state: 'Failed', errorCode: 'user_not_found'});
+    };
+    const device = new VettaDeviceLinks();
+    assert.equal(calls.length, 0);
+    assert.equal((await device.startQr()).errorCode, 'user_not_found');
+    assert.deepEqual(JSON.parse(calls[1].options.body), {method: 0});
+    assert.equal(device.handle, null);
+});
+test('device cancellation discards a late successful status', async () => {
+    let complete;
+    globalThis.fetch = async url => {
+        if (url.endsWith('/session')) return response({token: 'csrf'});
+        if (url.endsWith('/start')) return response({state: 'Started', handle: 'A'.repeat(64)});
+        if (url.endsWith('/cancel')) return response({state: 'Cancelled'});
+        return new Promise(resolve => { complete = resolve; });
+    };
+    const device = new VettaDeviceLinks(); await device.startQr();
+    const waiting = device.wait();
+    await device.cancel(); complete(response({state: 'Completed', redirect: '/account'}));
+    assert.equal((await waiting).state, 'Cancelled');
+});
+test('device helper rejects cross-origin QR and unsafe completion redirects', async () => {
+    const device = new VettaDeviceLinks(); device.handle = 'A'.repeat(64); device.deadline = Date.now() + 10000;
+    assert.throws(() => device.refreshQr({}, 'https://evil.example/qr'));
+    globalThis.fetch = async () => response({state: 'Completed', redirect: '//evil.example'});
+    await assert.rejects(device.wait(), /Invalid completion redirect/);
+});
+test('device helper deadline ends the attempt without an unbounded poll', async () => {
+    const device = new VettaDeviceLinks(); device.handle = 'A'.repeat(64); device.deadline = 0;
+    globalThis.fetch = async () => { throw new Error('must not poll'); };
+    assert.equal((await device.wait()).state, 'Expired');
+    assert.equal(device.handle, null);
+});
+test('QR image cleanup removes event handlers and image data on page exit', () => {
+    const events = new EventTarget();
+    globalThis.addEventListener = events.addEventListener.bind(events);
+    globalThis.removeEventListener = events.removeEventListener.bind(events);
+    class Image extends EventTarget { removeAttribute(name) { if (name === 'src') this.src = ''; } }
+    const image = new Image(), device = new VettaDeviceLinks();
+    device.handle = 'A'.repeat(64); device.deadline = Date.now() + 10000;
+    const stop = device.refreshQr(image, '/auth/vetta/device-link/qr?handle=' + device.handle);
+    assert.match(image.src, /\/device-link\/qr\?handle=/);
+    events.dispatchEvent(new Event('pagehide'));
+    assert.equal(image.src, '');
+    stop();
+});

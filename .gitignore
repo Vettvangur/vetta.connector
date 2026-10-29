@@ -14,3 +14,9 @@ TestResults/
 *.key
 *.snupkg
 *.nupkg
+
+# Local authentication attempt stores
+*.db
+*.db-*
+*.sqlite
+*.sqlite-*
