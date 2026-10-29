@@ -5,16 +5,19 @@ storage for SQL Server and Azure SQL. All instances of a customer website use th
 same connection string and table. It supports SIM, app, device-link, and
 customer-domain passkey attempts.
 
-## Deploy the schema
+## Automatic schema setup
 
-Run [001_CreateAttempts.sql](../src/Vetta.Connector.SqlServer/Migrations/001_CreateAttempts.sql)
-in **your website's database** as a deployment migration. The script is also included
-in the NuGet package under `contentFiles/any/any/Migrations/`. It creates only
-`dbo.VettaConnectorAttempts` and its indexes, and is safe to run again.
+Registering the store automatically applies the embedded
+[001_CreateAttempts.sql](../src/Vetta.Connector.SqlServer/Migrations/001_CreateAttempts.sql)
+at application startup in **your website's existing database**. No manual migration
+step is required. It creates only `dbo.VettaConnectorAttempts` and its indexes if
+missing, preserving existing attempts. A database application lock makes setup safe
+when multiple website instances start together. Startup fails if initialization fails;
+fix database connectivity or permissions and restart.
 
-The connector does not create or migrate tables at startup. Customers never need
-direct access to Vetta's central database. Use one logical store per website/application;
-all replicas of that website share it.
+The database itself must already exist. Customers never need direct access to Vetta's
+central database. Use one logical store per website/application; all replicas share it.
+Directly constructed stores initialize automatically on their first operation.
 
 ## Register the store
 
@@ -35,8 +38,9 @@ Server=your-sql-host;Database=your-website;Authentication=Active Directory Manag
 Choose the SQL authentication method supported by your deployment. Keep credentials
 out of source control. The runtime principal needs SELECT, INSERT, UPDATE and DELETE
 on `dbo.VettaConnectorAttempts`, and permission to use `sys.sp_getapplock` under the
-same database principal across instances. Schema deployment uses a separate principal
-with DDL permission. The runtime does not need database creation or table creation rights.
+same database principal across instances. For automatic table creation, it also needs
+CREATE TABLE on the database and ALTER on the dbo schema. Database creation rights
+are not required. Keep this connection limited to your website database.
 
 ## Concurrency and recovery
 

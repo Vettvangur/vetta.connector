@@ -1,4 +1,4 @@
--- Run explicitly in the CUSTOMER WEBSITE database during deployment.
+-- Applied automatically by Vetta.Connector.SqlServer in the CUSTOMER WEBSITE database.
 -- This script does not connect to or change Vetta's central database.
 SET XACT_ABORT ON;
 BEGIN TRANSACTION;
