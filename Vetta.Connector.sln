@@ -17,7 +17,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "samples", "samples", "{5D20
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CustomLogin.Web", "samples\CustomLogin.Web\CustomLogin.Web.csproj", "{D592B1C8-8488-47F4-93FC-A1B6E54DA190}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vetta.Connector.Sqlite", "src\Vetta.Connector.Sqlite\Vetta.Connector.Sqlite.csproj", "{72F89ACD-738B-43B5-80DB-8978613C48D3}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vetta.Connector.SqlServer", "src\Vetta.Connector.SqlServer\Vetta.Connector.SqlServer.csproj", "{72F89ACD-738B-43B5-80DB-8978613C48D3}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

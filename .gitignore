@@ -20,4 +20,3 @@ TestResults/
 *.db-*
 *.sqlite
 *.sqlite-*
-!src/Vetta.Connector.Sqlite/

@@ -23,13 +23,13 @@ cannot open your development computer's `localhost` address.
 
 ## ASP.NET Core setup
 
-Install `Vetta.Connector.AspNetCore`, and optionally `Vetta.Connector.Sqlite` for
-persistent storage on a single host. Configure the regular connector and your
+Install `Vetta.Connector.AspNetCore`, and optionally `Vetta.Connector.SqlServer` for
+persistent SQL Server storage across instances. Configure the regular connector and your
 `IVettaLoginCompletion` implementation as described in the README, then add:
 
 ```csharp
 using Vetta.Connector.AspNetCore;
-using Vetta.Connector.Sqlite;
+using Vetta.Connector.SqlServer;
 
 builder.Services.AddVettaAuthenticationFlow<MyLoginCompletion>();
 builder.Services.AddVettaDeviceLinks(new()
@@ -37,13 +37,15 @@ builder.Services.AddVettaDeviceLinks(new()
     CallbackUrl = new Uri("https://your-site.example/auth/vetta/device-link/callback"),
     ReturnPath = "/sign-in" // Local recovery page when the mobile callback fails.
 });
-builder.Services.AddVettaSqliteAttemptStore("/var/lib/my-site/vetta-attempts.db");
+builder.Services.AddVettaSqlServerAttemptStore(
+    builder.Configuration.GetConnectionString("VettaAttempts")
+    ?? throw new InvalidOperationException("Configure the attempt database."));
 
 // After authentication middleware:
 app.MapVettaAuthentication();
 ```
 
-The database directory must already exist and be writable by the application.
+Apply the [SQL Server migration](attempt-storage.md) to your website database before starting the application.
 For reverse proxies, configure trusted forwarded headers before these endpoints;
 the request must retain its public HTTPS scheme and host. If you change the mapped
 prefix, change the registered callback path to match.
@@ -194,4 +196,4 @@ dotnet run --project samples/CustomLogin.Web --launch-profile https
 Open `https://localhost:7243/device-link.html`. For an actual phone-to-website return,
 use a trusted HTTPS development domain reachable from the phone, listen on that
 address, and register its exact callback instead of localhost. If testing persistent
-storage, also set `Vetta:AttemptDatabasePath` to an absolute local database path.
+storage, also set `ConnectionStrings:VettaAttempts` to your test website database connection string and apply the migration first.

@@ -1,42 +1,72 @@
-# Persistent authentication attempts
+# SQL Server authentication attempt storage
 
-`Vetta.Connector.Sqlite` (upcoming 0.3.0) provides a supported persistent
-`IVettaAttemptStore` for **one host**, including multiple application processes
-sharing one database file. It supports SIM, app, device-link, and customer-domain
-passkey attempts.
+`Vetta.Connector.SqlServer` (upcoming 0.3.0) provides persistent `IVettaAttemptStore`
+storage for SQL Server and Azure SQL. All instances of a customer website use the
+same connection string and table. It supports SIM, app, device-link, and
+customer-domain passkey attempts.
+
+## Deploy the schema
+
+Run [001_CreateAttempts.sql](../src/Vetta.Connector.SqlServer/Migrations/001_CreateAttempts.sql)
+in **your website's database** as a deployment migration. The script is also included
+in the NuGet package under `contentFiles/any/any/Migrations/`. It creates only
+`dbo.VettaConnectorAttempts` and its indexes, and is safe to run again.
+
+The connector does not create or migrate tables at startup. Customers never need
+direct access to Vetta's central database. Use one logical store per website/application;
+all replicas of that website share it.
+
+## Register the store
 
 ```csharp
-using Vetta.Connector.Sqlite;
-builder.Services.AddVettaSqliteAttemptStore("/var/lib/my-site/vetta-attempts.db");
+using Vetta.Connector.SqlServer;
+
+builder.Services.AddVettaSqlServerAttemptStore(
+    builder.Configuration.GetConnectionString("VettaAttempts")
+    ?? throw new InvalidOperationException("Configure ConnectionStrings:VettaAttempts."));
 ```
 
-Create the parent directory first. Use a dedicated database on persistent **local**
-storage. The application creates its `VettaAttempts` table and indexes automatically.
-Restrict file and directory permissions to your application identity; the database
-contains short-lived authentication handles and must not be publicly served.
+For example, configure `ConnectionStrings:VettaAttempts` through your secret store:
 
-The store persists browser-binding hashes, upstream identifiers, expiration, phase,
-and a local completion redirect. It does not store verified identities or API keys.
-Writes and compare-and-set transitions are atomic across processes. Capacity checks
-are performed in the same transaction as insertion (10,000 total live attempts,
-five per browser). Expired rows are purged on new starts; `PurgeExpired()` is available
-for periodic maintenance on idle deployments.
+```text
+Server=your-sql-host;Database=your-website;Authentication=Active Directory Managed Identity;Encrypt=True;TrustServerCertificate=False
+```
 
-An operation that was interrupted by a process crash is never replayed automatically.
-A lease of 330 seconds covers the connector's maximum five-minute HTTP timeout.
-When the lease or attempt expires, the user must start again. This favors preventing
-duplicate sign-in side effects over transparently resuming an uncertain completion.
-Your completion handler must still be idempotent: the database cannot atomically
-commit your own account writes and the browser's cookie delivery.
+Choose the SQL authentication method supported by your deployment. Keep credentials
+out of source control. The runtime principal needs SELECT, INSERT, UPDATE and DELETE
+on `dbo.VettaConnectorAttempts`, and permission to use `sys.sp_getapplock` under the
+same database principal across instances. Schema deployment uses a separate principal
+with DDL permission. The runtime does not need database creation or table creation rights.
 
-**Deployment boundary:** do not share this file over NFS, SMB, or between container
-hosts. Do not use ephemeral container storage. For multiple hosts, implement
-`IVettaAttemptStore` against a shared transactional database with atomic ownership,
-capacity checks, expiry, and phase transitions. Sticky sessions alone do not make
-an in-memory store persistent. The in-memory store remains Development-only.
+## Concurrency and recovery
 
-Also persist ASP.NET Core Data Protection keys across restarts and share them across
-processes serving the same website. Use the same application name and cookie settings.
-Database persistence alone cannot preserve antiforgery or login-cookie validation.
-Apply your site's rate limits to paid authentication starts; per-browser capacity is
-not sufficient abuse protection.
+The table stores browser-binding hashes, upstream identifiers, expiry, phase, and a
+local completion redirect. It does not store verified identities or API keys.
+Parameterized updates check browser ownership, expiry, and expected phase atomically.
+A transaction-owned application lock serializes new reservations across hosts, so
+capacity checks and insertion cannot race (10,000 live attempts total, five per browser).
+
+An interrupted operation is never automatically replayed. A 330-second lease covers
+the maximum five-minute connector HTTP timeout. Once the lease or attempt expires,
+the user starts again. Completion handlers must remain idempotent: your account
+writes, the attempt transition, and delivery of a browser cookie are separate operations.
+Keep host clocks synchronized.
+
+New starts purge expired rows. `SqlServerAttemptStore.PurgeExpired()` can also run in
+scheduled maintenance for idle deployments. If SQL is unavailable, the connector
+cannot establish ownership and must not complete a login from cached browser data.
+Handle infrastructure failures with a friendly retry message and safe server logging.
+
+Persist and share ASP.NET Core Data Protection keys across website instances, with
+the same application name and cookie settings. Database persistence does not itself
+preserve antiforgery or login-cookie validation. Apply rate limits to authentication
+starts; the per-browser capacity limit alone is not sufficient abuse protection.
+
+## Tests
+
+CI starts an isolated SQL Server container and runs migration, persistence, expiry,
+ownership and concurrent reservation/completion tests. To run these locally, set
+`VETTA_TEST_SQLSERVER` to a **disposable test SQL Server** whose principal may create
+and drop databases. Tests create randomly named `VettaConnectorTest_*` databases and
+delete those databases afterwards. Without that variable, SQL integration tests are
+reported as skipped. Do not point it at a production service.

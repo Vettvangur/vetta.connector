@@ -21,12 +21,12 @@ See [QR and mobile setup](docs/device-links.md) for customer-owned login pages.
 | Library | Use it when |
 | --- | --- |
 | `Vetta.Connector` | You want a typed HTTP client and already manage your login endpoints and authentication state. |
-| `Vetta.Connector.Sqlite` | You want persistent attempt storage on a single host. Includes the ASP.NET Core integration. |
+| `Vetta.Connector.SqlServer` | You want persistent SQL Server attempt storage across website instances. Includes the ASP.NET Core integration. |
 | `Vetta.Connector.AspNetCore` | You want ready-made ASP.NET Core endpoints, browser binding, antiforgery protection, and a small JavaScript helper for your own UI. Includes the core client. |
 
 The ASP.NET Core helper includes an **in-memory development store**. Before using
-that helper in production, register the [SQLite store](docs/attempt-storage.md) for
-a single host or a transactional `IVettaAttemptStore` for multiple hosts. See [production setup](#production-setup).
+that helper in production, register the [SQL Server store](docs/attempt-storage.md) for
+your website’s SQL Server database. See [production setup](#production-setup).
 
 ## Before you start
 
@@ -416,9 +416,9 @@ objects: successful core results contain personal data.
 
 ## Production setup
 
-When using the ASP.NET Core helper, call `AddVettaSqliteAttemptStore` or register a
+When using the ASP.NET Core helper, call `AddVettaSqlServerAttemptStore` or register a
 singleton `IVettaAttemptStore` before mapping the authentication endpoints. The included development store is rejected
-outside the `Development` environment. The optional `Vetta.Connector.Sqlite` package supplies a persistent single-host store; see [storage setup and deployment limits](docs/attempt-storage.md).
+outside the `Development` environment. The optional `Vetta.Connector.SqlServer` package supplies a persistent SQL Server store for multiple hosts; see [storage setup and deployment limits](docs/attempt-storage.md).
 
 A custom implementation must enforce browser ownership and expiry on every operation,
 make `TryAdd`, `Bind`, and `Transition` atomic across instances, and reject stale

@@ -11,6 +11,8 @@ dotnet build Vetta.Connector.sln -c Release --no-restore -p:Version="$version"
 dotnet test tests/Vetta.Connector.Tests -c Release --no-build --no-restore
 node --test tests/browser/login.test.mjs
 mkdir -p artifacts
+# Keep packages from earlier local versions out of release uploads.
+find artifacts -maxdepth 1 -type f \( -name "*.nupkg" -o -name "*.snupkg" \) -delete
 dotnet pack src/Vetta.Connector -c Release --no-build --no-restore -p:Version="$version" -o artifacts
 dotnet pack src/Vetta.Connector.AspNetCore -c Release --no-build --no-restore -p:Version="$version" -o artifacts
-dotnet pack src/Vetta.Connector.Sqlite -c Release --no-build --no-restore -p:Version="$version" -o artifacts
+dotnet pack src/Vetta.Connector.SqlServer -c Release --no-build --no-restore -p:Version="$version" -o artifacts

@@ -1,0 +1,4 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><TargetFramework>net10.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable><PackageId>Vetta.Connector.SqlServer</PackageId><Description>Persistent SQL Server authentication attempt storage for Vetta.Connector.AspNetCore.</Description></PropertyGroup>
+  <ItemGroup><PackageReference Include="System.Security.Cryptography.Pkcs" Version="10.0.13" /><PackageReference Include="Microsoft.Data.SqlClient" Version="6.1.7" /><ProjectReference Include="../Vetta.Connector.AspNetCore/Vetta.Connector.AspNetCore.csproj" /><EmbeddedResource Include="Migrations/001_CreateAttempts.sql" /><None Update="Migrations/001_CreateAttempts.sql" Pack="true" PackagePath="contentFiles/any/any/Migrations/" /></ItemGroup>
+</Project>

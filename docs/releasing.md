@@ -1,7 +1,7 @@
 # Releases
 
 All three packages use the same version: `Vetta.Connector`,
-`Vetta.Connector.AspNetCore`, and `Vetta.Connector.Sqlite`. Their package dependencies
+`Vetta.Connector.AspNetCore`, and `Vetta.Connector.SqlServer`. Their package dependencies
 use the matching version. Source and packages are licensed under MIT.
 
 ## One-time NuGet setup
@@ -17,10 +17,10 @@ on NuGet.org with these values:
 | GitHub repository | `vetta.connector` |
 | Workflow file | `publish.yml` |
 | GitHub environment | `nuget` |
-| Package scopes (one per line) | `Vetta.Connector`, `Vetta.Connector.AspNetCore`, `Vetta.Connector.Sqlite` |
+| Package scopes (one per line) | `Vetta.Connector`, `Vetta.Connector.AspNetCore`, `Vetta.Connector.SqlServer` |
 
 **Before the first 0.3.0 release**, extend the existing policy to include
-`Vetta.Connector.Sqlite` (or verify its wildcard scope covers it).
+`Vetta.Connector.SqlServer` (or verify its wildcard scope covers it).
 Allow publishing new packages and new versions. Set the GitHub repository variable
 `NUGET_USER` to the **personal NuGet username that creates the policy** (not an
 email address or an organization name, unless that name is a personal account).
