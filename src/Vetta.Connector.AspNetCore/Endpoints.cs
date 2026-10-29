@@ -57,7 +57,7 @@ public static class Endpoints
         {
             if (Browser(http) is null)
                 http.Response.Cookies.Append(BrowserCookie, Convert.ToHexString(RandomNumberGenerator.GetBytes(32)),
-                    new CookieOptions { Secure = true, HttpOnly = true, SameSite = SameSiteMode.Strict, Path = "/", IsEssential = true });
+                    new CookieOptions { Secure = true, HttpOnly = true, SameSite = SameSiteMode.Lax, Path = "/", IsEssential = true });
             return Results.Ok(new { token = antiforgery.GetAndStoreTokens(http).RequestToken });
         });
         group.MapPost("/start", async (StartRequest request, HttpContext http, VettaLoginFlow flow) =>
@@ -87,7 +87,7 @@ public static class Endpoints
             var browser = Browser(http);
             if (browser is null || !Valid(request.CompletedLoginHandle) || request.CredentialId?.Length > 2048) return Results.BadRequest();
             var result = await flow.ManageAsync(browser, request.CompletedLoginHandle, request.CredentialId, http.RequestAborted);
-            return Results.Ok(new { result.State, result.Passkeys });
+            return Results.Ok(new { result.State, result.Passkeys, result.ErrorCode });
         });
         group.MapPost("/passkeys/options", async (PasskeyOptionsRequest request, HttpContext http, VettaPasskeyFlow flow) =>
         {
@@ -110,12 +110,13 @@ public static class Endpoints
             return Results.Ok(await flow.CancelAsync(browser, request.Handle, http.RequestAborted));
         });
         }
+        DeviceLinkEndpoints.Map(group, endpoints.ServiceProvider, prefix);
         group.MapGet("/client.js", () => Results.Stream(typeof(Endpoints).Assembly.GetManifestResourceStream(
             "Vetta.Connector.AspNetCore.vetta-login.js")!, "text/javascript"));
         return group;
     }
-    private static string? Browser(HttpContext http) => http.Request.Cookies.TryGetValue(BrowserCookie, out var value) && Valid(value) ? value : null;
-    private static bool Valid(string? value) => value is { Length: 64 } && value.All(Uri.IsHexDigit);
+    internal static string? Browser(HttpContext http) => http.Request.Cookies.TryGetValue(BrowserCookie, out var value) && Valid(value) ? value : null;
+    internal static bool Valid(string? value) => value is { Length: 64 } && value.All(Uri.IsHexDigit);
     public sealed record PasskeyManageRequest(string CompletedLoginHandle, string? CredentialId = null);
     public sealed record PasskeyOptionsRequest(string? CompletedLoginHandle = null);
     public sealed record PasskeyFinishRequest(string Handle, string CredentialJson);

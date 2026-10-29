@@ -68,13 +68,12 @@ public sealed class VettaClient : IVettaClient
             request.Headers.Authorization = new AuthenticationHeaderValue("apiKey", options.ApiKey);
             using var response = await http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, timeout.Token).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode)
-                return new(AuthenticationState.Unavailable, identifier, Error: response.StatusCode switch
-                {
-                    HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden => AuthenticationError.Unauthorized,
-                    HttpStatusCode.BadRequest => AuthenticationError.InvalidRequest,
-                    HttpStatusCode.TooManyRequests => AuthenticationError.RateLimited,
-                    _ => AuthenticationError.ServerUnavailable
-                });
+            {
+                JsonElement errorBody = default;
+                try { errorBody = await VettaProtocol.ReadAsync(response.Content, timeout.Token).ConfigureAwait(false); }
+                catch (JsonException) { /* Legacy endpoints may return empty or non-JSON errors. */ }
+                return VettaProtocol.Failure(response.StatusCode, identifier, errorBody);
+            }
             if (response.Content.Headers.ContentLength > MaxResponseBytes) return Invalid(identifier);
             await using var stream = await response.Content.ReadAsStreamAsync(timeout.Token).ConfigureAwait(false);
             using var buffer = new MemoryStream();
@@ -92,7 +91,7 @@ public sealed class VettaClient : IVettaClient
             {
                 if (error.ValueKind != JsonValueKind.String) return Invalid(identifier);
                 if (!string.IsNullOrWhiteSpace(error.GetString()))
-                    return new(AuthenticationState.Failed, identifier, Error: AuthenticationError.AuthenticationFailed);
+                    return new(AuthenticationState.Failed, identifier, Error: AuthenticationError.AuthenticationFailed) { ErrorCode = VettaProtocol.SafeCode(root) };
             }
             if (start)
             {
@@ -111,7 +110,7 @@ public sealed class VettaClient : IVettaClient
                 {
                     case "Pending" when !finished.GetBoolean(): return new(AuthenticationState.Pending, identifier);
                     case "Failed" when finished.GetBoolean():
-                        return new(AuthenticationState.Failed, identifier, Error: AuthenticationError.AuthenticationFailed);
+                        return new(AuthenticationState.Failed, identifier, Error: AuthenticationError.AuthenticationFailed) { ErrorCode = VettaProtocol.SafeCode(root) };
                     case "Success" when finished.GetBoolean(): break;
                     default: return Invalid(identifier);
                 }

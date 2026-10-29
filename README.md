@@ -13,16 +13,20 @@ Supports **.NET 10** and the following provider authentication methods:
 
 Customer-domain passkeys are available from version 0.2.0. See [passkey setup and examples](https://github.com/Vettvangur/vetta.connector/blob/main/docs/passkeys.md). They require a verified domain and explicit enablement; applications default to shared Vetta passkeys.
 
+QR scanning and mobile app links are included in the upcoming **0.3.0** release.
+See [QR and mobile setup](docs/device-links.md) for customer-owned login pages.
+
 ## Choose your integration
 
 | Library | Use it when |
 | --- | --- |
 | `Vetta.Connector` | You want a typed HTTP client and already manage your login endpoints and authentication state. |
+| `Vetta.Connector.Sqlite` | You want persistent attempt storage on a single host. Includes the ASP.NET Core integration. |
 | `Vetta.Connector.AspNetCore` | You want ready-made ASP.NET Core endpoints, browser binding, antiforgery protection, and a small JavaScript helper for your own UI. Includes the core client. |
 
 The ASP.NET Core helper includes an **in-memory development store**. Before using
-that helper in production, supply an `IVettaAttemptStore` implementation suitable
-for your deployment. See [production setup](#production-setup).
+that helper in production, register the [SQLite store](docs/attempt-storage.md) for
+a single host or a transactional `IVettaAttemptStore` for multiple hosts. See [production setup](#production-setup).
 
 ## Before you start
 
@@ -412,11 +416,11 @@ objects: successful core results contain personal data.
 
 ## Production setup
 
-When using the ASP.NET Core helper, register a singleton `IVettaAttemptStore`
-**before** `AddVettaAuthenticationFlow`. The included development store is rejected
-outside the `Development` environment. No production store adapter is bundled.
+When using the ASP.NET Core helper, call `AddVettaSqliteAttemptStore` or register a
+singleton `IVettaAttemptStore` before mapping the authentication endpoints. The included development store is rejected
+outside the `Development` environment. The optional `Vetta.Connector.Sqlite` package supplies a persistent single-host store; see [storage setup and deployment limits](docs/attempt-storage.md).
 
-Your implementation must enforce browser ownership and expiry on every operation,
+A custom implementation must enforce browser ownership and expiry on every operation,
 make `TryAdd`, `Bind`, and `Transition` atomic across instances, and reject stale
 state transitions. Read the [store interface](src/Vetta.Connector.AspNetCore/AttemptStore.cs)
 for its exact contract. A plain cache get/set sequence is not an atomic transition.

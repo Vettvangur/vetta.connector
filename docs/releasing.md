@@ -1,8 +1,8 @@
 # Releases
 
-Both packages use the same version: `Vetta.Connector` and
-`Vetta.Connector.AspNetCore`. The ASP.NET Core package depends on the matching core
-version. Source and packages are licensed under MIT.
+All three packages use the same version: `Vetta.Connector`,
+`Vetta.Connector.AspNetCore`, and `Vetta.Connector.Sqlite`. Their package dependencies
+use the matching version. Source and packages are licensed under MIT.
 
 ## One-time NuGet setup
 
@@ -17,8 +17,10 @@ on NuGet.org with these values:
 | GitHub repository | `vetta.connector` |
 | Workflow file | `publish.yml` |
 | GitHub environment | `nuget` |
-| Package scopes (one per line) | `Vetta.Connector`, `Vetta.Connector.AspNetCore` |
+| Package scopes (one per line) | `Vetta.Connector`, `Vetta.Connector.AspNetCore`, `Vetta.Connector.Sqlite` |
 
+**Before the first 0.3.0 release**, extend the existing policy to include
+`Vetta.Connector.Sqlite` (or verify its wildcard scope covers it).
 Allow publishing new packages and new versions. Set the GitHub repository variable
 `NUGET_USER` to the **personal NuGet username that creates the policy** (not an
 email address or an organization name, unless that name is a personal account).
@@ -37,12 +39,12 @@ short-lived credential. Pull requests and ordinary branch pushes only build/test
 2. Create and publish a GitHub release on a commit from `main`, using a tag such as
    `v0.1.0` or `v0.2.0-rc.1`. Use a prerelease version suffix for NuGet prereleases;
    GitHub's prerelease checkbox alone does not change the NuGet version.
-3. **Publish to NuGet** rebuilds, tests, packs, and publishes both packages and symbols.
+3. **Publish to NuGet** rebuilds, tests, packs, and publishes all three packages and symbols.
    The tag determines the package version. It refuses commits outside `main` history.
-4. Check the workflow result and the two NuGet package pages. Package indexing can
+4. Check the workflow result and the three NuGet package pages. Package indexing can
    take time. An already-published version is immutable; use a new version for fixes.
 
-If one package succeeds and the other fails, fix the external publishing issue and
+If one package succeeds and another fails, fix the external publishing issue and
 rerun the failed workflow. Duplicate versions are skipped. Do not move an existing
 release tag to publish different contents under the same version.
 
@@ -51,7 +53,7 @@ release tag to publish different contents under the same version.
 With .NET 10 and Node.js 24 installed, run:
 
 ```sh
-bash scripts/build.sh 0.1.0
+bash scripts/build.sh 0.3.0
 ```
 
 This runs the .NET and browser-helper tests and creates `.nupkg` and `.snupkg`

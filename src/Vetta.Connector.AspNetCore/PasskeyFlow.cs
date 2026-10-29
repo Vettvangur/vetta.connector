@@ -2,7 +2,7 @@ using System.Security.Cryptography;
 using Microsoft.AspNetCore.Http;
 namespace Vetta.Connector.AspNetCore;
 
-public sealed record PasskeyLoginReply(string State, string? Handle = null, string? OptionsJson = null, string? Redirect = null);
+public sealed record PasskeyLoginReply(string State, string? Handle = null, string? OptionsJson = null, string? Redirect = null) { public string? ErrorCode { get; init; } }
 public sealed class VettaPasskeyFlow(IVettaPasskeyClient client, IVettaAttemptStore store, IVettaLoginCompletion completion, TimeProvider clock)
 {
     public async Task<PasskeyResponse> ManageAsync(string browser, string completedHandle, string? credentialId, CancellationToken ct)
@@ -33,7 +33,7 @@ public sealed class VettaPasskeyFlow(IVettaPasskeyClient client, IVettaAttemptSt
             var result = proof is { } id ? await client.RegistrationOptionsAsync(policy.Origin, browser, id, ct)
                 : await client.LoginOptionsAsync(policy.Origin, browser, ct);
             if (result.State != "Options" || result.CeremonyId is not { } ceremony || !store.Bind(handle, browser, ceremony))
-            { store.Transition(handle, browser, AttemptPhase.Starting, AttemptPhase.Failed); return new("Unavailable"); }
+            { store.Transition(handle, browser, AttemptPhase.Starting, AttemptPhase.Failed); return new("Unavailable") { ErrorCode = result.ErrorCode }; }
             return new("Options", handle, result.OptionsJson);
         }
         catch { store.Transition(handle, browser, AttemptPhase.Starting, AttemptPhase.Failed); throw; }
@@ -49,7 +49,7 @@ public sealed class VettaPasskeyFlow(IVettaPasskeyClient client, IVettaAttemptSt
             var result = entry.Attempt.Kind == "passkey-register"
                 ? await client.FinishRegistrationAsync(entry.Attempt.Origin!, browser, entry.Attempt.UpstreamId, credential, ct)
                 : await client.FinishLoginAsync(entry.Attempt.Origin!, browser, entry.Attempt.UpstreamId, credential, ct);
-            if (result.State != "Succeeded" || result.Identity is null) return new("Failed");
+            if (result.State != "Succeeded" || result.Identity is null) return new("Failed") { ErrorCode = result.ErrorCode };
             if (!store.Transition(handle, browser, AttemptPhase.Polling, AttemptPhase.Completing)) return new("Cancelled");
             try
             {

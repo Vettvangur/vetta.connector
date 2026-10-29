@@ -111,3 +111,70 @@ export class VettaPasskeys extends VettaLogin {
         } finally { this.running = false; }
     }
 }
+
+// Device links are opt-in on the backend. Present the returned app link as an anchor;
+// opening it in a later, direct user gesture also works with mobile browser restrictions.
+export class VettaDeviceLinks extends VettaLogin {
+    async startQr(message) { return this.startDevice(0, message); }
+    async startWeb2App(message) { return this.startDevice(1, message); }
+    async startDevice(method, message) {
+        if (this.running || this.handle) throw new Error("Finish or cancel the current attempt first");
+        this.running = true;
+        try {
+            await this.initialize();
+            const result = await this.post("device-link/start", {method, message});
+            if (result.state === "Started") {
+                if (!/^[A-Fa-f0-9]{64}$/.test(result.handle)) throw new Error("Invalid attempt handle");
+                this.handle = result.handle;
+                this.deadline = Date.now() + 300000;
+            }
+            return result;
+        } finally { this.running = false; }
+    }
+    // Returns a cleanup function. Call it when leaving the view, cancelling or completing.
+    refreshQr(image, imageUrl, onError = () => {}) {
+        const url = new URL(imageUrl, location.origin);
+        if (url.origin !== location.origin || url.pathname !== `${this.base}/device-link/qr` ||
+            url.searchParams.get("handle") !== this.handle) throw new Error("Invalid QR image URL");
+        let stopped = false, timer, failures = 0;
+        const stop = () => { stopped = true; clearTimeout(timer); image.removeEventListener("load", loaded); image.removeEventListener("error", failed); globalThis.removeEventListener("pagehide", stop); image.removeAttribute("src"); };
+        const refresh = () => {
+            if (stopped || !this.handle || Date.now() >= this.deadline) { stop(); return; }
+            url.searchParams.set("t", String(Date.now())); image.src = url.href;
+        };
+        const loaded = () => { failures = 0; if (!stopped) timer = setTimeout(refresh, 1000); };
+        const failed = () => {
+            image.removeAttribute("src");
+            if (++failures >= 3) { stop(); onError(); }
+            else if (!stopped) timer = setTimeout(refresh, 1000);
+        };
+        image.addEventListener("load", loaded); image.addEventListener("error", failed);
+        globalThis.addEventListener("pagehide", stop, {once: true}); refresh();
+        return stop;
+    }
+    async wait(onUpdate = () => {}) {
+        if (this.running || !this.handle) throw new Error("No idle attempt to poll");
+        this.running = true; const handle = this.handle;
+        this.abort = new AbortController();
+        try {
+            while (this.handle === handle && Date.now() < this.deadline) {
+                const result = await this.post("device-link/status", {handle}, AbortSignal.any([this.abort.signal, AbortSignal.timeout(30000)]));
+                if (this.handle !== handle) return {state: "Cancelled"};
+                onUpdate(result);
+                if (!["Pending", "Busy"].includes(result.state)) {
+                    if (["Completed", "Failed", "Cancelled", "Expired"].includes(result.state)) this.handle = null;
+                    if (result.redirect && (!result.redirect.startsWith("/") || result.redirect.startsWith("//") || /[\\\u0000-\u001f\u007f]/.test(result.redirect))) throw new Error("Invalid completion redirect");
+                    return result;
+                }
+                await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+            this.handle = null; return {state: "Expired"};
+        } finally { this.running = false; this.abort = null; }
+    }
+    async cancel() {
+        if (!this.handle) return {state: "Cancelled"};
+        const result = await this.post("device-link/cancel", {handle: this.handle});
+        if (["Cancelled", "Expired", "Failed"].includes(result.state)) { this.handle = null; this.abort?.abort(); }
+        return result;
+    }
+}
