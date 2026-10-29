@@ -418,7 +418,7 @@ objects: successful core results contain personal data.
 
 When using the ASP.NET Core helper, call `AddVettaSqlServerAttemptStore` or register a
 singleton `IVettaAttemptStore` before mapping the authentication endpoints. The included development store is rejected
-outside the `Development` environment. The optional `Vetta.Connector.SqlServer` package supplies a persistent SQL Server store for multiple hosts; see [storage setup and deployment limits](docs/attempt-storage.md).
+outside the `Development` environment. The optional `Vetta.Connector.SqlServer` package supplies a persistent SQL Server store for multiple hosts and automatically creates its table at startup; see [storage setup and deployment limits](docs/attempt-storage.md).
 
 A custom implementation must enforce browser ownership and expiry on every operation,
 make `TryAdd`, `Bind`, and `Transition` atomic across instances, and reject stale

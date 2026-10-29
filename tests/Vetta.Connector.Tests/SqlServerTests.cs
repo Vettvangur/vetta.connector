@@ -21,11 +21,7 @@ public sealed class SqlServerTests : IDisposable
         }
         using (var create = db.CreateCommand()) { create.CommandText = $"CREATE DATABASE [{database}]"; create.ExecuteNonQuery(); }
         builder.InitialCatalog = database; connection = builder.ConnectionString;
-        using var schemaDb = new SqlConnection(connection); schemaDb.Open();
-        using var stream = typeof(SqlServerAttemptStore).Assembly.GetManifestResourceStream("Vetta.Connector.SqlServer.Migrations.001_CreateAttempts.sql")!;
-        using var reader = new StreamReader(stream);
-        using var command = schemaDb.CreateCommand(); command.CommandText = reader.ReadToEnd();
-        command.ExecuteNonQuery(); command.ExecuteNonQuery(); // Deployment script is idempotent.
+
     }
     private readonly Clock clock = new();
     private SqlServerAttemptStore Store() => new(connection, clock);
@@ -72,12 +68,26 @@ public sealed class SqlServerTests : IDisposable
         Assert.Equal(5, results.Count(x => x));
     }
     [SqlServerFact]
-    public void Constructor_never_creates_schema()
+    public async Task Initialization_is_automatic_concurrent_and_preserves_existing_rows()
     {
+        var stores = Enumerable.Range(0, 8).Select(_ => Store()).ToArray();
+        await Task.WhenAll(stores.Select(store => store.InitializeAsync()));
+        Assert.True(stores[0].TryAdd(Attempt()));
+        await Store().InitializeAsync();
+        Assert.NotNull(Store().Read("handle", "browser"));
+    }
+    [SqlServerFact]
+    public async Task Registration_initializes_schema_when_host_starts()
+    {
+        var builder = Microsoft.Extensions.Hosting.Host.CreateApplicationBuilder();
+        SqlServerRegistration.AddVettaSqlServerAttemptStore(builder.Services, connection);
+        using var host = builder.Build();
+        await host.StartAsync();
         using var db = new SqlConnection(connection); db.Open();
-        using var command = db.CreateCommand(); command.CommandText = "DROP TABLE dbo.VettaConnectorAttempts"; command.ExecuteNonQuery();
-        var store = Store();
-        Assert.Equal(208, Assert.Throws<SqlException>(() => store.Read("handle", "browser")).Number);
+        using var command = db.CreateCommand();
+        command.CommandText = "SELECT COUNT(*) FROM dbo.VettaConnectorAttempts";
+        Assert.Equal(0, (int)command.ExecuteScalar()!);
+        await host.StopAsync();
     }
     public void Dispose()
     {

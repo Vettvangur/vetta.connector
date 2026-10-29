@@ -45,7 +45,7 @@ builder.Services.AddVettaSqlServerAttemptStore(
 app.MapVettaAuthentication();
 ```
 
-Apply the [SQL Server migration](attempt-storage.md) to your website database before starting the application.
+The table is created automatically at startup; see [SQL Server setup and permissions](attempt-storage.md).
 For reverse proxies, configure trusted forwarded headers before these endpoints;
 the request must retain its public HTTPS scheme and host. If you change the mapped
 prefix, change the registered callback path to match.
@@ -196,4 +196,4 @@ dotnet run --project samples/CustomLogin.Web --launch-profile https
 Open `https://localhost:7243/device-link.html`. For an actual phone-to-website return,
 use a trusted HTTPS development domain reachable from the phone, listen on that
 address, and register its exact callback instead of localhost. If testing persistent
-storage, also set `ConnectionStrings:VettaAttempts` to your test website database connection string and apply the migration first.
+storage, also set `ConnectionStrings:VettaAttempts` to your test website database connection string. The package creates its table automatically at startup.
