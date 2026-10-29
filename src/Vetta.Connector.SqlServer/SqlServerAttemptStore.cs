@@ -4,6 +4,7 @@ using System.Text;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Hosting;
 using Vetta.Connector.AspNetCore;
 
 namespace Vetta.Connector.SqlServer;
@@ -15,9 +16,17 @@ public static class SqlServerRegistration
         ArgumentException.ThrowIfNullOrWhiteSpace(connectionString);
         _ = new SqlConnectionStringBuilder(connectionString);
         services.TryAddSingleton(TimeProvider.System);
-        services.Replace(ServiceDescriptor.Singleton<IVettaAttemptStore>(sp => new SqlServerAttemptStore(connectionString, sp.GetRequiredService<TimeProvider>())));
+        services.Replace(ServiceDescriptor.Singleton<SqlServerAttemptStore>(sp => new SqlServerAttemptStore(connectionString, sp.GetRequiredService<TimeProvider>())));
+        services.Replace(ServiceDescriptor.Singleton<IVettaAttemptStore>(sp => sp.GetRequiredService<SqlServerAttemptStore>()));
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService, SqlServerSchemaInitializer>());
         return services;
     }
+}
+
+internal sealed class SqlServerSchemaInitializer(SqlServerAttemptStore store) : IHostedService
+{
+    public Task StartAsync(CancellationToken cancellationToken) => store.InitializeAsync(cancellationToken);
+    public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 }
 
 /// <summary>Shared SQL Server storage with atomic ownership and phase checks across application instances.</summary>
@@ -26,15 +35,41 @@ public sealed class SqlServerAttemptStore : IVettaAttemptStore
     private readonly string connectionString;
     private readonly TimeProvider time;
     private const int OperationSeconds = 330;
+    private readonly SemaphoreSlim initializationGate = new(1, 1);
+    private volatile bool initialized;
     public SqlServerAttemptStore(string connectionString, TimeProvider time)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(connectionString);
         _ = new SqlConnectionStringBuilder(connectionString);
         this.connectionString = connectionString; this.time = time;
-        // Schema creation is deliberately an explicit deployment step, never a startup side effect.
     }
+    /// <summary>Creates the attempt table and indexes if missing. Safe across concurrent application instances.</summary>
+    public async Task InitializeAsync(CancellationToken cancellationToken = default)
+    {
+        if (initialized) return;
+        await initializationGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            if (initialized) return;
+            await using var db = new SqlConnection(connectionString);
+            await db.OpenAsync(cancellationToken).ConfigureAwait(false);
+            using var stream = typeof(SqlServerAttemptStore).Assembly.GetManifestResourceStream(
+                "Vetta.Connector.SqlServer.Migrations.001_CreateAttempts.sql")
+                ?? throw new InvalidOperationException("The SQL Server attempt-storage migration is missing.");
+            using var reader = new StreamReader(stream);
+            using var command = db.CreateCommand();
+            command.CommandText = await reader.ReadToEndAsync(cancellationToken).ConfigureAwait(false);
+            command.CommandTimeout = 30;
+            await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+            initialized = true;
+        }
+        finally { initializationGate.Release(); }
+    }
+
     private SqlConnection Open()
     {
+        // Also support callers constructing the store directly without an ASP.NET Core host.
+        InitializeAsync().GetAwaiter().GetResult();
         var connection = new SqlConnection(connectionString);
         try { connection.Open(); return connection; }
         catch { connection.Dispose(); throw; }
