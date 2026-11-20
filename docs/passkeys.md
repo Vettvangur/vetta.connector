@@ -2,7 +2,9 @@
 
 Available in **Vetta.Connector 0.2.0** and **Vetta.Connector.AspNetCore 0.2.0**. The corresponding service must be enabled for your application.
 
-Applications default to **Vetta passkeys**, which are used on Vetta's authentication domain. For native passkeys on your website, your Vetta administrator must verify and enable your exact HTTPS origin. Users enroll a separate passkey; existing Vetta passkeys cannot be transferred.
+Applications default to **Vetta passkeys**, which are used on Vetta's authentication domain. For native passkeys on your website, your Vetta administrator must verify and enable your exact HTTPS origin. Choose **Both (Vetta and customer domain)** to also keep shared Vetta passkeys available in hosted login for the same application. CustomerDomain-only mode remains available. Both requires a server version supporting that mode, but works with the existing Connector API, including 0.2.0: its policy response remains `CustomerDomain` for customer-site login. No CIBA integration is required.
+
+Users enroll a separate passkey; existing Vetta passkeys cannot be transferred.
 
 This version supports one hostname per application on HTTPS port 443, without wildcards or parent-domain sharing. For example, `https://accounts.example.com` uses RP ID `accounts.example.com`. Credentials are isolated by application even when applications share a hostname. `PreferPasskeys` controls presentation separately.
 
