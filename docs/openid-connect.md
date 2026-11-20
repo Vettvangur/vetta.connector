@@ -44,8 +44,10 @@ accounts by name; choose an explicit account-linking/provisioning policy.
 | `national_id` | Verified Icelandic kennitala in the ID token |
 
 Defaults request `openid profile`. To request only the identifier, remove
-`VettaIdentityScopes.Profile` from `options.Scopes`. `national_id` must be enabled
-for this OIDC client by the server operator as well as requested by the client.
+`VettaIdentityScopes.Profile` from `options.Scopes`. New server registrations allow all supported identity scopes by default, but
+operators can remove individual scopes. `national_id` must still be allowed for
+this client and explicitly requested. Existing registrations can receive permission
+through the server’s one-time upgrade command.
 A direct connector API key does not grant this permission. The helper fails login
 if a requested national ID is missing, duplicated or malformed. It does not log
 or persist the token. The host controls its cookie and account data retention.
