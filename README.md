@@ -16,6 +16,9 @@ Customer-domain passkeys are available from version 0.2.0. See [passkey setup an
 QR scanning and mobile app links are included in the upcoming **0.3.0** release.
 See [QR and mobile setup](docs/device-links.md) for customer-owned login pages.
 
+For optional hosted OpenID Connect login with client-specific identity scopes, see
+[OIDC setup](docs/openid-connect.md). Direct authentication remains unchanged.
+
 ## Choose your integration
 
 | Library | Use it when |
