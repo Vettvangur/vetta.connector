@@ -19,6 +19,10 @@ See [QR and mobile setup](docs/device-links.md) for customer-owned login pages.
 For optional hosted OpenID Connect login with client-specific identity scopes, see
 [OIDC setup](docs/openid-connect.md). Direct authentication remains unchanged.
 
+From version **0.4.0**, backend services can call your own APIs with Vetta machine
+tokens (OAuth 2.0 client credentials), and your APIs can validate them. See
+[machine-to-machine](docs/machine-to-machine.md).
+
 ## Choose your integration
 
 | Library | Use it when |
