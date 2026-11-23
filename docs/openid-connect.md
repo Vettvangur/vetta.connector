@@ -58,3 +58,8 @@ no refresh-token/offline-access support, email or phone scope. For advanced even
 handling, use the standard ASP.NET Core named OIDC options; preserve identity
 validation when replacing token-validation events. The existing `VerifiedIdentity.Ssn`
 on the direct API retains its existing contract.
+
+## Company sign-in (fyrirtækjaumboð)
+
+When your organisation has the company sign-in add-on, add the `company` scope (`VettaCompanyClaims.Scope`). Someone with a company chooses on Vetta's login page whether to sign in as themselves or as a company. The person's own claims are unchanged; a chosen company adds `company_id` (kennitala), `company_name` and `company_role` (`procuration_holder`, `manager` or `member`). Read them with `VettaCompanyClaims.From(User)`, which is null when the person signed in as themselves. For your own sign-in page, see [companies](companies.md).
+
