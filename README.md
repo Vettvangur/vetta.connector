@@ -21,7 +21,7 @@ For optional hosted OpenID Connect login with client-specific identity scopes, s
 
 From version **0.4.0**, backend services can call your own APIs with Vetta machine
 tokens (OAuth 2.0 client credentials), and your APIs can validate them. See
-[machine-to-machine](docs/machine-to-machine.md).
+[machine-to-machine](docs/machine-to-machine.md). For company sign-in (fyrirtækjaumboð) on your own sign-in page, see [companies](docs/companies.md).
 
 ## Choose your integration
 
