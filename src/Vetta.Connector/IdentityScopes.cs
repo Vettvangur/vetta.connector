@@ -6,7 +6,9 @@ public static class VettaIdentityScopes
     public const string OpenId = "openid";
     public const string Profile = "profile";
     public const string NationalId = "national_id";
-    public static bool IsSupported(string scope) => scope is OpenId or Profile or NationalId;
+    /// <summary>Company sign-in (fyrirtækjaumboð); the same value as <see cref="VettaCompanyClaims.Scope"/>.</summary>
+    public const string Company = VettaCompanyClaims.Scope;
+    public static bool IsSupported(string scope) => scope is OpenId or Profile or NationalId or Company;
 }
 
 public static class VettaIdentityClaims

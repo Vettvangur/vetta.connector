@@ -53,6 +53,16 @@ public sealed class OpenIdConnectTests
             Assert.NotNull(context.Result?.Failure);
         }
     }
+    [Fact]
+    public void Company_scope_is_accepted_and_requested()
+    {
+        var services = new ServiceCollection(); services.AddLogging();
+        services.AddAuthentication().AddCookie("external").AddVettaOpenIdConnect("vetta", options =>
+        { Configure(options); options.Scopes.Add(VettaCompanyClaims.Scope); });
+        using var provider = services.BuildServiceProvider();
+        var oidc = provider.GetRequiredService<IOptionsMonitor<OpenIdConnectOptions>>().Get("vetta");
+        Assert.Equal(new[] { "company", "openid", "profile" }, oidc.Scope.Order());
+    }
     [Theory]
     [InlineData("email")][InlineData("offline_access")][InlineData("arbitrary")]
     public void Unknown_scopes_are_rejected(string scope)
