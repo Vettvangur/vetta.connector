@@ -61,5 +61,5 @@ on the direct API retains its existing contract.
 
 ## Company sign-in (fyrirtækjaumboð)
 
-When your organisation has the company sign-in add-on, add the `company` scope (`VettaCompanyClaims.Scope`). Someone with a company chooses on Vetta's login page whether to sign in as themselves or as a company. The person's own claims are unchanged; a chosen company adds `company_id` (kennitala), `company_name` and `company_role` (`procuration_holder`, `manager` or `member`). Read them with `VettaCompanyClaims.From(User)`, which is null when the person signed in as themselves. For your own sign-in page, see [companies](companies.md).
+When your organisation has the company sign-in add-on and your application has company sign-in switched on, every sign-in gets the `company` scope automatically: you do not need to add it (adding `VettaCompanyClaims.Scope` does no harm). Someone with a company chooses on Vetta's login page whether to sign in as themselves or as a company. The person's own claims are unchanged; a chosen company adds `company_id` (kennitala), `company_name` and `company_role` (`procuration_holder`, `manager` or `member`). Read them with `VettaCompanyClaims.From(User)`, which is null when the person signed in as themselves. For your own sign-in page, see [companies](companies.md).
 

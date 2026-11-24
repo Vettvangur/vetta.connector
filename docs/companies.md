@@ -1,6 +1,6 @@
 # Company sign-in (fyrirtækjaumboð) on your own sign-in page
 
-When your organisation has Vetta's company sign-in add-on, people who sign in on your own page can choose a company they hold prókúra for, or were given access to, and sign in on its behalf. On Vetta's hosted login page this happens automatically (`company` scope, see [OpenID Connect](openid-connect.md)). With the direct API on your own page, use `IVettaCompanyClient`. It is registered by `AddVettaConnector` and runs on your server only, with your application's API key.
+When your organisation has Vetta's company sign-in add-on, people who sign in on your own page can choose a company they hold prókúra for, or were given access to, and sign in on its behalf. On Vetta's hosted login page this happens automatically once company sign-in is switched on for your application; your site does not need to ask for anything (see [OpenID Connect](openid-connect.md)). With the direct API on your own page, use `IVettaCompanyClient`. It is registered by `AddVettaConnector` and runs on your server only, with your application's API key.
 
 ## Flow
 
