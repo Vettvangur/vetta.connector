@@ -43,11 +43,13 @@ accounts by name; choose an explicit account-linking/provisioning policy.
 | `profile` | Verified `name` |
 | `national_id` | Verified Icelandic kennitala in the ID token |
 
-Defaults request `openid profile`. To request only the identifier, remove
-`VettaIdentityScopes.Profile` from `options.Scopes`. New server registrations allow all supported identity scopes by default, but
-operators can remove individual scopes. `national_id` must still be allowed for
-this client and explicitly requested. Existing registrations can receive permission
-through the server’s one-time upgrade command.
+From version 0.6.0 the helper requests the verified name and kennitala by default
+(`openid profile national_id`), and new Vetta sign-in clients allow both. To receive
+only the name, remove `VettaIdentityScopes.NationalId` from `options.Scopes` (and,
+if you like, untick Kennitala for the sign-in client in the Vetta portal). A scope
+must be both requested and allowed for the client: requesting `national_id` while
+it is switched off for the client refuses the sign-in. Version 0.5.x requests
+`openid profile`; add `VettaIdentityScopes.NationalId` there to receive the kennitala.
 A direct connector API key does not grant this permission. The helper fails login
 if a requested national ID is missing, duplicated or malformed. It does not log
 or persist the token. The host controls its cookie and account data retention.
