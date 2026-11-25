@@ -13,7 +13,11 @@ public sealed class VettaOpenIdConnectOptions
     /// <summary>The host's external/temporary cookie scheme. Apply account policy before issuing the application cookie.</summary>
     public string SignInScheme { get; set; } = "";
     public string CallbackPath { get; set; } = "/signin-vetta";
-    public ICollection<string> Scopes { get; } = new List<string> { VettaIdentityScopes.OpenId, VettaIdentityScopes.Profile };
+    /// <summary>
+    /// Requested scopes. By default the verified name and kennitala (<c>openid profile national_id</c>), which new Vetta
+    /// sign-in clients allow. Remove <see cref="VettaIdentityScopes.NationalId"/> to receive only the name.
+    /// </summary>
+    public ICollection<string> Scopes { get; } = new List<string> { VettaIdentityScopes.OpenId, VettaIdentityScopes.Profile, VettaIdentityScopes.NationalId };
 }
 
 public static class VettaOpenIdConnectRegistration

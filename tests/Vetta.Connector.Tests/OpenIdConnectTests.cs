@@ -61,7 +61,7 @@ public sealed class OpenIdConnectTests
         { Configure(options); options.Scopes.Add(VettaCompanyClaims.Scope); });
         using var provider = services.BuildServiceProvider();
         var oidc = provider.GetRequiredService<IOptionsMonitor<OpenIdConnectOptions>>().Get("vetta");
-        Assert.Equal(new[] { "company", "openid", "profile" }, oidc.Scope.Order());
+        Assert.Equal(new[] { "company", "national_id", "openid", "profile" }, oidc.Scope.Order());
     }
     [Theory]
     [InlineData("email")][InlineData("offline_access")][InlineData("arbitrary")]
@@ -72,9 +72,21 @@ public sealed class OpenIdConnectTests
         { Configure(options); options.Scopes.Add(scope); }));
     }
     [Fact]
-    public void National_identity_is_opt_in_and_openid_is_required()
+    public void Name_and_national_identity_are_requested_by_default() =>
+        Assert.Equal(new[] { "national_id", "openid", "profile" }, new VettaOpenIdConnectOptions().Scopes.Order());
+    [Fact]
+    public void Removing_national_identity_requests_only_the_name()
     {
-        Assert.DoesNotContain(VettaIdentityScopes.NationalId, new VettaOpenIdConnectOptions().Scopes);
+        var services = new ServiceCollection(); services.AddLogging();
+        services.AddAuthentication().AddCookie("external").AddVettaOpenIdConnect("vetta", options =>
+        { Configure(options); options.Scopes.Remove(VettaIdentityScopes.NationalId); });
+        using var provider = services.BuildServiceProvider();
+        var oidc = provider.GetRequiredService<IOptionsMonitor<OpenIdConnectOptions>>().Get("vetta");
+        Assert.Equal(new[] { "openid", "profile" }, oidc.Scope.Order());
+    }
+    [Fact]
+    public void Openid_is_required()
+    {
         Assert.Throws<ArgumentException>(() => new ServiceCollection().AddAuthentication().AddVettaOpenIdConnect("vetta", options =>
         { Configure(options); options.Scopes.Clear(); options.Scopes.Add("profile"); }));
     }
